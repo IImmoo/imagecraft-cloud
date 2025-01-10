@@ -1,171 +1,220 @@
-import React, { useState, useCallback } from 'react';
-import Head from 'next/head';
-import { CloudArrowUpIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
+import { useDropzone } from 'react-dropzone';
+import {
+  Layout,
+  Page,
+  Card,
+  Button,
+  Banner,
+  Stack,
+  Text,
+  TextContainer
+} from '@shopify/polaris';
+import '@shopify/polaris/build/esm/styles.css';
 
 export default function Home() {
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [processedImage, setProcessedImage] = useState('');
-  const [originalImage, setOriginalImage] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [apiResponse, setApiResponse] = useState<any>(null);
 
-  const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (!file || !file.type.startsWith('image/')) {
-      setError('Lütfen geçerli bir görsel dosyası yükleyin');
-      return;
-    }
-    
-    handleImage(file);
-  }, []);
-
-  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) {
+  const onDrop = async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) {
       setError('Lütfen bir görsel seçin');
       return;
     }
-    
-    handleImage(file);
-  }, []);
 
-  const handleImage = async (file: File) => {
     setIsLoading(true);
-    setError('');
+    setError(null);
     setApiResponse(null);
-    
-    try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const base64Image = reader.result as string;
-        setOriginalImage(base64Image);
-        
-        console.log('Görsel yükleniyor...');
-        const response = await fetch('/api/remove-logo', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ imageUrl: base64Image }),
-        });
 
-        const data = await response.json();
-        console.log('API Yanıtı:', data);
-        setApiResponse(data);
-        
-        if (data.success) {
-          setProcessedImage(data.url);
-        } else {
-          setError(data.error || 'Bir hata oluştu');
-          console.error('API Hatası:', data.error, data.details);
+    try {
+      console.log('Görsel yükleme başlıyor...');
+      
+      const file = acceptedFiles[0];
+      console.log('Seçilen dosya:', {
+        name: file.name,
+        type: file.type,
+        size: file.size
+      });
+
+      // Dosyayı base64'e çevir
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64Image = reader.result as string;
+          console.log('Base64 dönüşümü tamamlandı, uzunluk:', base64Image.length);
+
+          console.log('API isteği gönderiliyor...');
+          const response = await fetch('/api/remove-logo', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ imageUrl: base64Image })
+          });
+
+          console.log('API yanıtı alındı:', {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries())
+          });
+
+          const data = await response.json();
+          console.log('API yanıt verisi:', data);
+
+          if (!response.ok) {
+            throw new Error(data.error || data.details || 'API yanıtı başarısız');
+          }
+
+          if (!data.success || !data.url) {
+            throw new Error('API yanıtında URL bulunamadı');
+          }
+
+          setProcessedImageUrl(data.url);
+          setApiResponse(data);
+        } catch (error: any) {
+          console.error('API hatası:', {
+            message: error.message,
+            name: error.name,
+            stack: error.stack
+          });
+          setError(`API Hatası: ${error.message}`);
+          setApiResponse(error);
         }
       };
-    } catch (err) {
-      const error = err as Error;
-      setError('Görsel işlenirken bir hata oluştu: ' + error.message);
-      console.error('İşlem hatası:', error);
+
+      reader.onerror = (error) => {
+        console.error('Dosya okuma hatası:', error);
+        setError('Dosya okunamadı');
+      };
+
+      reader.readAsDataURL(file);
+      setUploadedImageUrl(URL.createObjectURL(file));
+    } catch (error: any) {
+      console.error('Genel hata:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
+      setError(`Görsel işlenirken bir hata oluştu: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.webp']
+    },
+    multiple: false
+  });
+
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Head>
-        <title>ImageCraft - Logo Kaldırma Aracı</title>
-        <meta name="description" content="Görsellerden logo kaldırma uygulaması" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-8">
-            ImageCraft - Logo Kaldırma Aracı
-          </h1>
-          
-          {error && (
-            <div className="mb-8 p-4 bg-red-50 rounded-lg">
-              <p className="text-red-700">{error}</p>
-              {apiResponse && (
-                <pre className="mt-2 text-sm text-red-600 text-left">
-                  {JSON.stringify(apiResponse, null, 2)}
-                </pre>
-              )}
-            </div>
-          )}
-
-          <div
-            className="max-w-xl mx-auto mb-8"
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
-          >
-            <label
-              className="flex justify-center w-full h-48 px-4 transition bg-white border-2 border-gray-300 border-dashed rounded-lg appearance-none cursor-pointer hover:border-primary-500 focus:outline-none"
-            >
-              <span className="flex flex-col items-center justify-center">
-                <CloudArrowUpIcon className="w-12 h-12 text-gray-400" />
-                <span className="mt-2 text-base text-gray-600">
-                  Logoyu kaldırmak istediğiniz görseli sürükleyin veya seçin
-                </span>
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={handleFileInput}
-                  disabled={isLoading}
-                />
-              </span>
-            </label>
-          </div>
-
-          {isLoading && (
-            <div className="card mb-8">
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-                <span className="ml-3 text-gray-600">Görsel işleniyor...</span>
+    <Page>
+      <Layout>
+        <Layout.Section>
+          <Card>
+            <Card.Section>
+              <div {...getRootProps()} style={{
+                border: '2px dashed #ccc',
+                borderRadius: '4px',
+                padding: '20px',
+                textAlign: 'center',
+                cursor: 'pointer'
+              }}>
+                <input {...getInputProps()} />
+                <TextContainer>
+                  {isDragActive ? (
+                    <p>Görseli buraya bırakın...</p>
+                  ) : (
+                    <p>Görseli seçmek için tıklayın veya buraya sürükleyin</p>
+                  )}
+                </TextContainer>
               </div>
-            </div>
-          )}
+            </Card.Section>
+          </Card>
+        </Layout.Section>
 
-          {(originalImage || processedImage) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {originalImage && (
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-4">Orijinal Görsel</h3>
-                  <img
-                    src={originalImage}
-                    alt="Orijinal"
-                    className="w-full rounded-lg"
-                  />
+        {error && (
+          <Layout.Section>
+            <Banner status="critical">
+              <p>{error}</p>
+              {apiResponse && (
+                <div style={{ marginTop: '10px' }}>
+                  <TextContainer>
+                    <Text as="h4" variant="bodyMd">API Yanıtı:</Text>
+                    <pre style={{ 
+                      whiteSpace: 'pre-wrap', 
+                      wordBreak: 'break-word',
+                      background: '#f5f5f5',
+                      padding: '10px',
+                      borderRadius: '4px',
+                      marginTop: '5px'
+                    }}>
+                      {JSON.stringify(apiResponse, null, 2)}
+                    </pre>
+                  </TextContainer>
                 </div>
               )}
-              
-              {processedImage && (
-                <div className="card">
-                  <h3 className="text-lg font-semibold mb-4">İşlenmiş Görsel</h3>
-                  <img
-                    src={processedImage}
-                    alt="İşlenmiş"
-                    className="w-full rounded-lg"
-                  />
-                  <div className="mt-4">
-                    <a
-                      href={processedImage}
-                      download
-                      className="btn-primary inline-flex items-center"
-                    >
-                      <ArrowDownTrayIcon className="w-5 h-5 mr-2" />
-                      İndir
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+            </Banner>
+          </Layout.Section>
+        )}
+
+        {isLoading && (
+          <Layout.Section>
+            <Banner status="info">
+              <p>Görsel işleniyor...</p>
+            </Banner>
+          </Layout.Section>
+        )}
+
+        {(uploadedImageUrl || processedImageUrl) && (
+          <Layout.Section>
+            <Card>
+              <Card.Section>
+                <Stack distribution="fillEvenly">
+                  {uploadedImageUrl && (
+                    <Stack.Item>
+                      <TextContainer>
+                        <Text as="h3" variant="headingMd">Orijinal Görsel</Text>
+                        <img 
+                          src={uploadedImageUrl} 
+                          alt="Original" 
+                          style={{ maxWidth: '100%', maxHeight: '300px' }} 
+                        />
+                      </TextContainer>
+                    </Stack.Item>
+                  )}
+                  {processedImageUrl && (
+                    <Stack.Item>
+                      <TextContainer>
+                        <Text as="h3" variant="headingMd">İşlenmiş Görsel</Text>
+                        <img 
+                          src={processedImageUrl} 
+                          alt="Processed" 
+                          style={{ maxWidth: '100%', maxHeight: '300px' }} 
+                        />
+                        <div style={{ marginTop: '10px' }}>
+                          <Button
+                            primary
+                            fullWidth
+                            onClick={() => window.open(processedImageUrl, '_blank')}
+                          >
+                            İndir
+                          </Button>
+                        </div>
+                      </TextContainer>
+                    </Stack.Item>
+                  )}
+                </Stack>
+              </Card.Section>
+            </Card>
+          </Layout.Section>
+        )}
+      </Layout>
+    </Page>
   );
 } 
