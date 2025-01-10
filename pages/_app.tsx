@@ -1,8 +1,8 @@
-import '../styles/globals.css';
+import React from 'react';
 import type { AppProps } from 'next/app';
 import { AppProvider } from '@shopify/polaris';
-import tr from '@shopify/polaris/locales/tr.json';
 import '@shopify/polaris/build/esm/styles.css';
+import tr from '@shopify/polaris/locales/tr.json';
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
