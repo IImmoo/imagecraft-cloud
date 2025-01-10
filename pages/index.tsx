@@ -74,7 +74,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Head>
-        <title>ImageCraft - Logo Kaldırma</title>
+        <title>ImageCraft - Logo Kaldırma Aracı</title>
         <meta name="description" content="Görsellerden logo kaldırma uygulaması" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
@@ -82,7 +82,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-8">
-            ImageCraft - Logo Kaldırma
+            ImageCraft - Logo Kaldırma Aracı
           </h1>
           
           {error && (
