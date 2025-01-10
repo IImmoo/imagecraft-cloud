@@ -7,18 +7,25 @@ export default function Home() {
   const [error, setError] = useState('');
   const [processedImage, setProcessedImage] = useState('');
   const [originalImage, setOriginalImage] = useState('');
+  const [apiResponse, setApiResponse] = useState<any>(null);
 
   const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (!file || !file.type.startsWith('image/')) return;
+    if (!file || !file.type.startsWith('image/')) {
+      setError('Lütfen geçerli bir görsel dosyası yükleyin');
+      return;
+    }
     
     handleImage(file);
   }, []);
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      setError('Lütfen bir görsel seçin');
+      return;
+    }
     
     handleImage(file);
   }, []);
@@ -26,6 +33,7 @@ export default function Home() {
   const handleImage = async (file: File) => {
     setIsLoading(true);
     setError('');
+    setApiResponse(null);
     
     try {
       const reader = new FileReader();
@@ -34,6 +42,7 @@ export default function Home() {
         const base64Image = reader.result as string;
         setOriginalImage(base64Image);
         
+        console.log('Görsel yükleniyor...');
         const response = await fetch('/api/remove-logo', {
           method: 'POST',
           headers: {
@@ -43,16 +52,20 @@ export default function Home() {
         });
 
         const data = await response.json();
+        console.log('API Yanıtı:', data);
+        setApiResponse(data);
         
         if (data.success) {
           setProcessedImage(data.url);
         } else {
           setError(data.error || 'Bir hata oluştu');
+          console.error('API Hatası:', data.error, data.details);
         }
       };
     } catch (err) {
-      setError('Görsel işlenirken bir hata oluştu');
-      console.error(err);
+      const error = err as Error;
+      setError('Görsel işlenirken bir hata oluştu: ' + error.message);
+      console.error('İşlem hatası:', error);
     } finally {
       setIsLoading(false);
     }
@@ -75,6 +88,11 @@ export default function Home() {
           {error && (
             <div className="mb-8 p-4 bg-red-50 rounded-lg">
               <p className="text-red-700">{error}</p>
+              {apiResponse && (
+                <pre className="mt-2 text-sm text-red-600 text-left">
+                  {JSON.stringify(apiResponse, null, 2)}
+                </pre>
+              )}
             </div>
           )}
 
