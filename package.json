@@ -1,6 +1,6 @@
 {
   "name": "imagecraft-cloud",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,33 +9,25 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@heroicons/react": "^2.1.1",
-    "@shopify/polaris": "^11.1.2",
-    "cloudinary": "1.41.0",
-    "cookie-parser": "^1.4.6",
-    "cors": "^2.8.5",
-    "dotenv": "16.3.1",
+    "@shopify/app-bridge": "^3.5.0",
+    "@shopify/app-bridge-react": "^3.5.0",
+    "@shopify/app-bridge-utils": "^3.5.0",
+    "@shopify/polaris": "^12.0.0",
+    "@shopify/shopify-api": "^7.7.0",
+    "cloudinary": "^1.41.0",
     "express": "^4.18.2",
-    "next": "13.4.19",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "react-dropzone": "^14.3.5"
+    "formidable": "^3.5.1",
+    "next": "14.0.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-dropzone": "^14.2.3"
   },
   "devDependencies": {
-    "@types/cookie-parser": "^1.4.6",
-    "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/node": "^20.0.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "autoprefixer": "^10.4.16",
-    "eslint": "^8.0.0",
-    "eslint-config-next": "13.4.19",
-    "postcss": "^8.4.31",
-    "tailwindcss": "^3.3.5",
-    "typescript": "^5.0.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
+    "@types/formidable": "^3.4.5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "typescript": "^5"
   }
 }
