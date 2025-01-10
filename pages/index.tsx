@@ -6,9 +6,10 @@ import {
   Card,
   Button,
   Banner,
-  Stack,
+  LegacyStack,
   Text,
-  TextContainer
+  TextContainer,
+  LegacyCard
 } from '@shopify/polaris';
 import '@shopify/polaris/build/esm/styles.css';
 
@@ -116,8 +117,8 @@ export default function Home() {
     <Page>
       <Layout>
         <Layout.Section>
-          <Card>
-            <Card.Section>
+          <LegacyCard>
+            <LegacyCard.Section>
               <div {...getRootProps()} style={{
                 border: '2px dashed #ccc',
                 borderRadius: '4px',
@@ -134,13 +135,13 @@ export default function Home() {
                   )}
                 </TextContainer>
               </div>
-            </Card.Section>
-          </Card>
+            </LegacyCard.Section>
+          </LegacyCard>
         </Layout.Section>
 
         {error && (
           <Layout.Section>
-            <Banner status="critical">
+            <Banner tone="critical">
               <p>{error}</p>
               {apiResponse && (
                 <div style={{ marginTop: '10px' }}>
@@ -165,7 +166,7 @@ export default function Home() {
 
         {isLoading && (
           <Layout.Section>
-            <Banner status="info">
+            <Banner tone="info">
               <p>Görsel işleniyor...</p>
             </Banner>
           </Layout.Section>
@@ -173,11 +174,11 @@ export default function Home() {
 
         {(uploadedImageUrl || processedImageUrl) && (
           <Layout.Section>
-            <Card>
-              <Card.Section>
-                <Stack distribution="fillEvenly">
+            <LegacyCard>
+              <LegacyCard.Section>
+                <LegacyStack distribution="fillEvenly">
                   {uploadedImageUrl && (
-                    <Stack.Item>
+                    <LegacyStack.Item>
                       <TextContainer>
                         <Text as="h3" variant="headingMd">Orijinal Görsel</Text>
                         <img 
@@ -186,10 +187,10 @@ export default function Home() {
                           style={{ maxWidth: '100%', maxHeight: '300px' }} 
                         />
                       </TextContainer>
-                    </Stack.Item>
+                    </LegacyStack.Item>
                   )}
                   {processedImageUrl && (
-                    <Stack.Item>
+                    <LegacyStack.Item>
                       <TextContainer>
                         <Text as="h3" variant="headingMd">İşlenmiş Görsel</Text>
                         <img 
@@ -199,7 +200,7 @@ export default function Home() {
                         />
                         <div style={{ marginTop: '10px' }}>
                           <Button
-                            primary
+                            variant="primary"
                             fullWidth
                             onClick={() => window.open(processedImageUrl, '_blank')}
                           >
@@ -207,11 +208,11 @@ export default function Home() {
                           </Button>
                         </div>
                       </TextContainer>
-                    </Stack.Item>
+                    </LegacyStack.Item>
                   )}
-                </Stack>
-              </Card.Section>
-            </Card>
+                </LegacyStack>
+              </LegacyCard.Section>
+            </LegacyCard>
           </Layout.Section>
         )}
       </Layout>
