@@ -20,6 +20,12 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  console.log('API Request received:', {
+    method: req.method,
+    headers: req.headers,
+    body: typeof req.body === 'object' ? JSON.stringify(req.body) : req.body
+  });
+
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
@@ -27,10 +33,18 @@ export default async function handler(
   try {
     const { imageUrl } = req.body;
 
-    console.log('Received request with imageUrl:', imageUrl ? 'present' : 'missing');
+    console.log('Request body:', {
+      imageUrl: imageUrl ? `${imageUrl.substring(0, 50)}...` : 'missing',
+      bodyType: typeof req.body,
+      contentType: req.headers['content-type']
+    });
 
     if (!imageUrl) {
-      return res.status(400).json({ success: false, error: 'Image URL is required' });
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Image URL is required',
+        receivedBody: req.body
+      });
     }
 
     // Environment variables'ları kontrol et
@@ -43,7 +57,8 @@ export default async function handler(
     console.log('Environment Check:', {
       cloud_name: envCheck.cloud_name ? 'set' : 'missing',
       api_key: envCheck.api_key ? 'set' : 'missing',
-      api_secret: envCheck.api_secret ? 'set' : 'missing'
+      api_secret: envCheck.api_secret ? 'set' : 'missing',
+      nodeEnv: process.env.NODE_ENV
     });
 
     if (!envCheck.cloud_name || !envCheck.api_key || !envCheck.api_secret) {
@@ -60,15 +75,22 @@ export default async function handler(
     try {
       console.log('Attempting initial upload to Cloudinary...');
       
+      // Base64 kontrolü
+      const isBase64 = imageUrl.startsWith('data:image');
+      console.log('Image format:', isBase64 ? 'base64' : 'URL');
+      
       // İlk olarak görseli yükle
       const uploadResponse = await cloudinary.uploader.upload(imageUrl, {
         folder: 'logo-removal',
-        resource_type: 'image'
+        resource_type: 'image',
+        timeout: 60000 // 60 saniye timeout
       });
 
       console.log('Initial upload successful:', {
         public_id: uploadResponse.public_id,
-        url: uploadResponse.secure_url
+        url: uploadResponse.secure_url,
+        format: uploadResponse.format,
+        size: uploadResponse.bytes
       });
 
       console.log('Applying AI background removal...');
@@ -76,12 +98,15 @@ export default async function handler(
       // Sonra AI background removal uygula
       const aiResponse = await cloudinary.uploader.explicit(uploadResponse.public_id, {
         type: 'upload',
-        effect: 'background_removal'
+        effect: 'background_removal',
+        timeout: 120000 // 120 saniye timeout
       });
 
       console.log('AI processing successful:', {
         public_id: aiResponse.public_id,
-        url: aiResponse.secure_url
+        url: aiResponse.secure_url,
+        format: aiResponse.format,
+        size: aiResponse.bytes
       });
 
       if (!aiResponse || !aiResponse.secure_url) {
@@ -97,7 +122,9 @@ export default async function handler(
       console.error('Cloudinary Error Details:', {
         message: cloudinaryError?.message,
         name: cloudinaryError?.name,
-        stack: cloudinaryError?.stack
+        stack: cloudinaryError?.stack,
+        error: cloudinaryError?.error,
+        http_code: cloudinaryError?.http_code
       });
 
       // Cloudinary'den gelen hatayı daha detaylı işle
@@ -114,7 +141,9 @@ export default async function handler(
     console.error('Logo kaldırma hatası:', {
       message: error?.message,
       name: error?.name,
-      stack: error?.stack
+      stack: error?.stack,
+      code: error?.code,
+      statusCode: error?.statusCode
     });
 
     return res.status(500).json({
@@ -124,7 +153,8 @@ export default async function handler(
       env_status: {
         cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? 'set' : 'missing',
         api_key: process.env.CLOUDINARY_API_KEY ? 'set' : 'missing',
-        api_secret: process.env.CLOUDINARY_API_SECRET ? 'set' : 'missing'
+        api_secret: process.env.CLOUDINARY_API_SECRET ? 'set' : 'missing',
+        node_env: process.env.NODE_ENV
       }
     });
   }
