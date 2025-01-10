@@ -8,6 +8,14 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb'
+    }
+  }
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -24,31 +32,52 @@ export default async function handler(
     }
 
     // Environment variables'ları kontrol et
-    console.log('Cloudinary Config:', {
+    const config = {
       cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
       api_key: process.env.CLOUDINARY_API_KEY,
       api_secret: process.env.CLOUDINARY_API_SECRET?.substring(0, 5) + '...'
-    });
+    };
 
-    // Cloudinary'ye yükle ve logo kaldırma işlemini uygula
-    const result = await cloudinary.uploader.upload(imageUrl, {
+    console.log('Cloudinary Config:', config);
+
+    if (!config.cloud_name || !config.api_key || !config.api_secret) {
+      return res.status(500).json({
+        success: false,
+        error: 'Cloudinary yapılandırması eksik',
+        details: 'Lütfen tüm Cloudinary environment variable\'larını kontrol edin'
+      });
+    }
+
+    // Base64 görselini Cloudinary'ye yükle
+    const uploadResponse = await cloudinary.uploader.upload(imageUrl, {
+      folder: 'logo-removal',
+      resource_type: 'image',
       background_removal: true,
-      notification_url: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}/api/cloudinary-webhook` : undefined
+      format: 'png'
     });
 
-    console.log('Cloudinary Result:', result);
+    console.log('Cloudinary Upload Response:', uploadResponse);
+
+    if (!uploadResponse || !uploadResponse.secure_url) {
+      throw new Error('Cloudinary upload failed');
+    }
 
     return res.status(200).json({
       success: true,
-      url: result.secure_url,
-      original: result
+      url: uploadResponse.secure_url,
+      original: uploadResponse
     });
   } catch (error) {
     console.error('Logo kaldırma hatası:', error);
     return res.status(500).json({
       success: false,
       error: 'Görsel işlenirken bir hata oluştu',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      config: {
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME ? 'set' : 'missing',
+        api_key: process.env.CLOUDINARY_API_KEY ? 'set' : 'missing',
+        api_secret: process.env.CLOUDINARY_API_SECRET ? 'set' : 'missing'
+      }
     });
   }
 } 
