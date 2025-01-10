@@ -48,25 +48,36 @@ export default async function handler(
       });
     }
 
-    // Base64 görselini Cloudinary'ye yükle
-    const uploadResponse = await cloudinary.uploader.upload(imageUrl, {
-      folder: 'logo-removal',
-      resource_type: 'image',
-      background_removal: true,
-      format: 'png'
-    });
+    try {
+      // İlk olarak görseli yükle
+      const uploadResponse = await cloudinary.uploader.upload(imageUrl, {
+        folder: 'logo-removal',
+        resource_type: 'image'
+      });
 
-    console.log('Cloudinary Upload Response:', uploadResponse);
+      console.log('Initial Upload Response:', uploadResponse);
 
-    if (!uploadResponse || !uploadResponse.secure_url) {
-      throw new Error('Cloudinary upload failed');
+      // Sonra AI background removal uygula
+      const aiResponse = await cloudinary.uploader.explicit(uploadResponse.public_id, {
+        type: 'upload',
+        effect: 'background_removal'
+      });
+
+      console.log('AI Processing Response:', aiResponse);
+
+      if (!aiResponse || !aiResponse.secure_url) {
+        throw new Error('AI processing failed');
+      }
+
+      return res.status(200).json({
+        success: true,
+        url: aiResponse.secure_url,
+        original: aiResponse
+      });
+    } catch (uploadError) {
+      console.error('Cloudinary Error:', uploadError);
+      throw new Error(uploadError instanceof Error ? uploadError.message : 'Cloudinary processing failed');
     }
-
-    return res.status(200).json({
-      success: true,
-      url: uploadResponse.secure_url,
-      original: uploadResponse
-    });
   } catch (error) {
     console.error('Logo kaldırma hatası:', error);
     return res.status(500).json({
